@@ -1,0 +1,467 @@
+import { useMemo, useState, useRef, useEffect, memo } from 'react';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+} from '@tanstack/react-table';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import useTraceStore from '../../store/traceStore';
+import { formatDuration } from '../../utils/formatters';
+
+const OperatorView = () => {
+  const { operators, selectedOperator, setSelectedOperator } = useTraceStore();
+  const [sorting, setSorting] = useState([{ id: 'deviceSelfDuration', desc: true }]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+
+  const tableContainerRef = useRef(null);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setGlobalFilter(searchInput);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Operation Name',
+        cell: (info) => (
+          <span title={info.getValue()}>
+            {info.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'calls',
+        header: 'Calls',
+        cell: (info) => info.getValue().toLocaleString(),
+        sortingFn: 'basic',
+      },
+      {
+        accessorKey: 'deviceSelfDuration',
+        header: 'Device Self',
+        cell: (info) => formatDuration(info.getValue()),
+        sortingFn: 'basic',
+      },
+      {
+        accessorKey: 'deviceTotalDuration',
+        header: 'Device Total',
+        cell: (info) => formatDuration(info.getValue()),
+        sortingFn: 'basic',
+      },
+      {
+        accessorKey: 'hostSelfDuration',
+        header: 'Host Self',
+        cell: (info) => formatDuration(info.getValue()),
+        sortingFn: 'basic',
+      },
+      {
+        accessorKey: 'selfCudaTimePercent',
+        header: '% CUDA',
+        cell: (info) => `${info.getValue().toFixed(1)}%`,
+        sortingFn: 'basic',
+      },
+    ],
+    []
+  );
+
+  const data = useMemo(() => {
+    if (!operators) return [];
+    return operators;
+  }, [operators]);
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      sorting,
+      globalFilter,
+    },
+    onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    globalFilterFn: 'includesString',
+  });
+
+  const { rows } = table.getRowModel();
+
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 45,
+    overscan: 10,
+  });
+
+  const handleExportCSV = () => {
+    if (!operators) return;
+
+    const csvRows = [
+      ['Operation Name', 'Calls', 'Device Self (μs)', 'Device Total (μs)', 'Host Self (μs)', '% CUDA'],
+      ...operators.map(op => [
+        op.name,
+        op.calls,
+        op.deviceSelfDuration,
+        op.deviceTotalDuration,
+        op.hostSelfDuration,
+        op.selfCudaTimePercent,
+      ]),
+    ];
+
+    const csvContent = csvRows.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'operators.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (!operators || operators.length === 0) {
+    return <div className="view-container">No operator data available</div>;
+  }
+
+  return (
+    <div className="view-container operator-view">
+      <div className="operator-header">
+        <div className="operator-controls">
+          <input
+            type="text"
+            placeholder="Search operations..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="search-input"
+          />
+          <button onClick={handleExportCSV} className="export-button">
+            Export to CSV
+          </button>
+        </div>
+        <div className="operator-stats">
+          Showing {rows.length} of {data.length} operations
+        </div>
+      </div>
+
+      <div className="table-container" ref={tableContainerRef}>
+        <table className="operator-table">
+          <thead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    className={header.column.getCanSort() ? 'sortable' : ''}
+                    onClick={header.column.getToggleSortingHandler()}
+                  >
+                    <div className="header-content">
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.column.getIsSorted() && (
+                        <span className="sort-indicator">
+                          {header.column.getIsSorted() === 'asc' ? ' ↑' : ' ↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            <tr style={{ height: `${rowVirtualizer.getTotalSize()}px` }}>
+              <td colSpan={columns.length} style={{ padding: 0, position: 'relative' }}>
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const row = rows[virtualRow.index];
+                  return (
+                    <div
+                      key={row.id}
+                      className={`table-row ${
+                        selectedOperator?.name === row.original.name ? 'selected' : ''
+                      }`}
+                      onClick={() => setSelectedOperator(row.original)}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell, idx) => (
+                        <div
+                          key={cell.id}
+                          className={`table-cell ${idx === 0 ? 'cell-name' : ''}`}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {selectedOperator && (
+        <div className="detail-panel">
+          <div className="detail-header">
+            <h3>Operator Details</h3>
+            <button onClick={() => setSelectedOperator(null)} className="close-button">
+              ×
+            </button>
+          </div>
+          <div className="detail-content">
+            <div className="detail-row">
+              <span className="detail-label">Name:</span>
+              <span className="detail-value">{selectedOperator.name}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Category:</span>
+              <span className="detail-value">{selectedOperator.category}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Calls:</span>
+              <span className="detail-value">{selectedOperator.calls.toLocaleString()}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Device Self Duration:</span>
+              <span className="detail-value">{formatDuration(selectedOperator.deviceSelfDuration)}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Device Total Duration:</span>
+              <span className="detail-value">{formatDuration(selectedOperator.deviceTotalDuration)}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Host Self Duration:</span>
+              <span className="detail-value">{formatDuration(selectedOperator.hostSelfDuration)}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Min Duration:</span>
+              <span className="detail-value">{formatDuration(selectedOperator.minDuration)}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Max Duration:</span>
+              <span className="detail-value">{formatDuration(selectedOperator.maxDuration)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .operator-view {
+          display: flex;
+          flex-direction: column;
+          height: calc(100vh - 120px);
+        }
+
+        .operator-header {
+          padding: 1.5rem;
+          background: #1f2937;
+          border-bottom: 1px solid #374151;
+        }
+
+        .operator-controls {
+          display: flex;
+          gap: 1rem;
+          margin-bottom: 1rem;
+        }
+
+        .search-input {
+          flex: 1;
+          padding: 0.5rem 1rem;
+          background: #374151;
+          border: 1px solid #4b5563;
+          border-radius: 6px;
+          color: #f3f4f6;
+          font-size: 0.875rem;
+        }
+
+        .search-input:focus {
+          outline: none;
+          border-color: #6366f1;
+        }
+
+        .export-button {
+          padding: 0.5rem 1.5rem;
+          background: #6366f1;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.875rem;
+          font-weight: 500;
+          transition: background 0.2s;
+        }
+
+        .export-button:hover {
+          background: #4f46e5;
+        }
+
+        .operator-stats {
+          font-size: 0.875rem;
+          color: #9ca3af;
+        }
+
+        .table-container {
+          flex: 1;
+          overflow: auto;
+          background: #111827;
+        }
+
+        .operator-table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+        }
+
+        .operator-table thead {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background: #1f2937;
+        }
+
+        .operator-table thead tr {
+          display: grid;
+          grid-template-columns: minmax(200px, 2fr) repeat(5, minmax(120px, 1fr));
+          gap: 0;
+        }
+
+        .operator-table th {
+          padding: 0.75rem 1rem;
+          text-align: left;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #9ca3af;
+          border-bottom: 1px solid #374151;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .operator-table th.sortable {
+          cursor: pointer;
+          user-select: none;
+        }
+
+        .operator-table th.sortable:hover {
+          background: #374151;
+        }
+
+        .header-content {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .sort-indicator {
+          color: #6366f1;
+        }
+
+        .table-row {
+          display: grid;
+          grid-template-columns: minmax(200px, 2fr) repeat(5, minmax(120px, 1fr));
+          gap: 0;
+          border-bottom: 1px solid #374151;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+
+        .table-row:hover {
+          background: #1f2937;
+        }
+
+        .table-row.selected {
+          background: #4338ca;
+        }
+
+        .table-cell {
+          padding: 0.75rem 1rem;
+          font-size: 0.875rem;
+          color: #f3f4f6;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .detail-panel {
+          background: #1f2937;
+          border-top: 1px solid #374151;
+          padding: 1.5rem;
+        }
+
+        .detail-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+
+        .detail-header h3 {
+          margin: 0;
+          font-size: 1rem;
+          font-weight: 600;
+          color: #f3f4f6;
+        }
+
+        .close-button {
+          background: none;
+          border: none;
+          color: #9ca3af;
+          font-size: 1.5rem;
+          cursor: pointer;
+          padding: 0;
+          width: 2rem;
+          height: 2rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+        }
+
+        .close-button:hover {
+          background: #374151;
+          color: #f3f4f6;
+        }
+
+        .detail-content {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 0.75rem;
+        }
+
+        .detail-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 0.5rem 0;
+        }
+
+        .detail-label {
+          font-size: 0.875rem;
+          color: #9ca3af;
+          font-weight: 500;
+        }
+
+        .detail-value {
+          font-size: 0.875rem;
+          color: #f3f4f6;
+          font-family: monospace;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default OperatorView;

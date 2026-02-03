@@ -1,0 +1,52 @@
+.trace-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #111827;
+}
+
+.trace-header {
+  background: #1f2937;
+  border-bottom: 1px solid #374151;
+  padding: 1rem 1.5rem;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.trace-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f3f4f6;
+}
+
+.file-name {
+  padding: 0.25rem 0.75rem;
+  background: #374151;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: #9ca3af;
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.trace-content {
+  flex: 1;
+  overflow: auto;
+  padding: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .trace-content {
+    padding: 1rem;
+  }
+
+  .trace-header h1 {
+    font-size: 1.1rem;
+  }
+}

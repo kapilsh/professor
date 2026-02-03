@@ -1,0 +1,54 @@
+.memory-view {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.memory-table-container {
+  overflow-x: auto;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.memory-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.memory-table thead {
+  position: sticky;
+  top: 0;
+  background: #1f2937;
+  z-index: 10;
+}
+
+.memory-table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  border-bottom: 2px solid #374151;
+}
+
+.memory-table td {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #f3f4f6;
+  border-bottom: 1px solid #374151;
+  font-family: monospace;
+}
+
+.memory-table tbody tr:hover {
+  background: #1f2937;
+}
+
+.memory-note {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #1f2937;
+  border-radius: 6px;
+  color: #9ca3af;
+  text-align: center;
+  font-size: 0.875rem;
+}
