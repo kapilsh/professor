@@ -1,4 +1,8 @@
-# Perfessor 🧠
+<div align="center">
+  <img src="public/logo.png" alt="Perfessor Logo" width="300"/>
+</div>
+
+# Perfessor 
 
 A comprehensive web-based visualization tool for PyTorch profiler traces, inspired by TensorBoard's profiler plugin. Built with React 19, this application provides interactive analysis of profiling data using Perfetto UI for trace visualization.
 
@@ -125,6 +129,8 @@ with profiler.profile(
 # Export trace
 prof.export_chrome_trace("trace.json")
 ```
+
+**📚 For more information on PyTorch profiling**, see the [PyTorch Profiler Recipe](https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html).
 
 ### 2. Upload & Analyze
 
@@ -275,6 +281,7 @@ Supported event types:
 Based on:
 - [PyTorch Kineto TensorBoard Plugin](https://github.com/pytorch/kineto/tree/main/tb_plugin)
 - [PyTorch Profiler Tutorial](https://docs.pytorch.org/tutorials/intermediate/tensorboard_profiler_tutorial.html)
+- [PyTorch Profiler Recipe](https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html)
 - [Perfetto UI](https://ui.perfetto.dev/)
 
 ## Contributing
