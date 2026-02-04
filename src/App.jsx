@@ -4,6 +4,7 @@ import FileUploader from './components/FileUploader';
 import TraceViewer from './components/TraceViewer';
 import TraceSelector from './components/TraceSelector';
 import AddTraceButton from './components/AddTraceButton';
+import UpdateBanner from './components/UpdateBanner';
 import './App.css';
 
 class ErrorBoundary extends Component {
@@ -224,6 +225,7 @@ const AppContent = () => {
 function App() {
   return (
     <ErrorBoundary>
+      <UpdateBanner />
       <AppContent />
     </ErrorBoundary>
   );
