@@ -1,8 +1,8 @@
-# Professor 🧠
+# Perfessor 🧠
 
 A comprehensive web-based visualization tool for PyTorch profiler traces, inspired by TensorBoard's profiler plugin. Built with React 19, this application provides interactive analysis of profiling data using Perfetto UI for trace visualization.
 
-**🌐 Live Demo**: [https://kapilsharma.dev/professor/](https://kapilsharma.dev/professor/)
+**🌐 Live Demo**: [https://kapilsharma.dev/perfessor/](https://kapilsharma.dev/perfessor/)
 
 ![React](https://img.shields.io/badge/React-19-blue)
 ![Vite](https://img.shields.io/badge/Vite-7.3-purple)
@@ -60,7 +60,7 @@ A comprehensive web-based visualization tool for PyTorch profiler traces, inspir
 ```bash
 # Clone the repository
 git clone <your-repo-url>
-cd professor
+cd perfessor
 
 # Install dependencies
 npm install
